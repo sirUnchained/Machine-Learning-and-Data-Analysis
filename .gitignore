@@ -3,3 +3,5 @@ GroceryDataset.csv
 .virtual_documents
 anaconda_projects
 *.csv
+*.zip
+*.pkl
