@@ -39,6 +39,7 @@ if sk_metrics:
 if sk_model_selection:
     cross_val_score = sk_model_selection.cross_val_score
     KFold = sk_model_selection.KFold
+    GridSearchCV = sk_model_selection.GridSearchCV
     StratifiedKFold = sk_model_selection.StratifiedKFold
 
 
@@ -194,6 +195,88 @@ def plot_images(path: str, count: int = 4, folder_label: bool = False):
 
         plt.tight_layout()
         plt.show()
+
+
+def run_grid_search(
+    model: object,
+    param_grid: dict,
+    X: np.ndarray,
+    y: np.ndarray,
+    cv: int,
+    model_name: str,
+):
+    """
+    Performs hyperparameter tuning for a given scikit-learn model using GridSearchCV
+    with negative log loss as the scoring metric. This function is designed to work
+    for both binary and multiclass classification problems, provided the model
+    supports `predict_proba`.
+
+    Parameters
+    ----------
+    model : object
+        An unfitted model instance from scikit-learn (or compatible API)
+        that has `fit`, `predict_proba`, `get_params`, and `set_params` methods.
+        Example: LogisticRegression(), RandomForestClassifier()
+
+    param_grid : dict or list of dicts
+        Dictionary with parameters names (string) as keys and lists of
+        parameter settings to try as values, or a list of such
+        dictionaries, in order to have the GridSearchCV explore the
+        parameter space.
+        Example: {'C': [0.1, 1, 10], 'penalty': ['l1', 'l2']}
+
+    X : array-like of shape (n_samples, n_features)
+        Training data features.
+
+    y : array-like of shape (n_samples,)
+        Training data target labels. This should be a 1D array containing class labels.
+
+    cv : int, cross-validation generator or an iterable
+        Determines the cross-validation splitting strategy.
+        Possible inputs for cv are:
+        - integer, to specify the number of folds in a (Stratified)KFold.
+        - An object that implements the 'split' method (e.g., KFold, StratifiedKFold).
+        Example: 5, or KFold(n_splits=5, shuffle=True, random_state=42)
+
+    model_name : str
+        A descriptive name for the model being evaluated, used for printing output.
+        Example: "Logistic Regression", "Random Forest", "Multiclass Classifier"
+
+    Returns
+    -------
+    best_model : object
+        The model instance fitted with the best parameters found during the grid search.
+        This model is trained on the entire provided training dataset (X, y).
+
+    Notes
+    -----
+    This function performs a Grid Search to find the optimal hyperparameters for a given model.
+    It uses 'neg_log_loss' as the scoring metric because GridSearchCV aims to maximize the score,
+    while Log Loss is a metric to be minimized. Using the negative Log Loss effectively turns minimization
+    into maximization for GridSearchCV. This metric is suitable for both binary and multiclass problems.
+    """
+    # Setup `GridSearchCV` object
+    grid_search = GridSearchCV(
+        model, param_grid, cv=cv, scoring="neg_log_loss", n_jobs=-1, verbose=1
+    )
+
+    # Fit the grid search to the training data
+    grid_search.fit(X, y)
+
+    print(f"\n--- Grid Search for `{model_name}` ---")
+    print(f"Best Hyper Parameters: {grid_search.best_params_}")
+
+    # Retrieve the best cross-validated score (which is the negative log loss)
+    best_score_neg_log_loss = grid_search.best_score_
+    # Convert the negative log loss score to a positive log loss for better interpretation
+    best_log_loss = -best_score_neg_log_loss
+    print(f"Best Mean Log Loss (CV): {best_log_loss:.4f}")
+
+    # Get the best model found by GridSearchCV, fitted on the entire training dataset
+    best_model = grid_search.best_estimator_
+
+    # Return the best model instance
+    return best_model
 
 
 def plot_roc_curve(model, X_test, y_test):
@@ -559,4 +642,5 @@ __all__ = [
     "plot_torch_history",
     "make_window_horizon",
     "agument_images_yolo",
+    "run_grid_search",
 ]

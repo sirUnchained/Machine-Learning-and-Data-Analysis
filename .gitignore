@@ -5,3 +5,8 @@ anaconda_projects
 *.csv
 *.zip
 *.pkl
+__pycache__
+obj
+
+house pricing
+titanic
